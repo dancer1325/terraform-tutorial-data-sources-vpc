@@ -5,13 +5,27 @@ provider "aws" {
   region = var.aws_region
 }
 
+data "aws_availability_zones" "available" {
+  state = "available"
+  filter {
+    name   = "zone-type"
+    values = ["availability-zone"]
+  }
+}
+
+data "aws_region" "current" { }
+
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
-  version = "3.14.0"
+  version = "5.8.1"
 
   cidr = var.vpc_cidr_block
 
-  azs             = ["us-east-1a", "us-east-1b", "us-east-1c", "us-east-1d", "us-east-1e"]
+  # AZs
+  # 1. hardcoded
+  #azs             = ["us-east-1a", "us-east-1b", "us-east-1c", "us-east-1d", "us-east-1e"]
+  # 2. via dataSource
+  azs = data.aws_availability_zones.available.names
   private_subnets = slice(var.private_subnet_cidr_blocks, 0, 2)
   public_subnets  = slice(var.public_subnet_cidr_blocks, 0, 2)
 
@@ -23,7 +37,7 @@ module "vpc" {
 
 module "app_security_group" {
   source  = "terraform-aws-modules/security-group/aws//modules/web"
-  version = "4.9.0"
+  version = "~> 5.0"
 
   name        = "web-server-sg"
   description = "Security group for web-servers with HTTP ports open within VPC"
@@ -34,7 +48,7 @@ module "app_security_group" {
 
 module "lb_security_group" {
   source  = "terraform-aws-modules/security-group/aws//modules/web"
-  version = "4.9.0"
+  version = "~> 5.0"
 
   name        = "lb-sg-project-alpha-dev"
   description = "Security group for load balancer with HTTP ports open within VPC"
